@@ -969,22 +969,22 @@ impl Decodable for Transaction {
             let segwit_flag = u8::consensus_decode_from_finite_reader(r)?;
             match segwit_flag {
                 // BIP144 input witnesses
-                1 => {
+                1 | 8 => {
                     let mut input = Vec::<TxIn>::consensus_decode_from_finite_reader(r)?;
                     let output = Vec::<TxOut>::consensus_decode_from_finite_reader(r)?;
                     for txin in input.iter_mut() {
                         txin.witness = Decodable::consensus_decode_from_finite_reader(r)?;
                     }
-                    if !input.is_empty() && input.iter().all(|input| input.witness.is_empty()) {
-                        Err(encode::Error::ParseFailed("witness flag set but no witnesses present"))
-                    } else {
-                        Ok(Transaction {
-                            version,
-                            input,
-                            output,
-                            lock_time: Decodable::consensus_decode_from_finite_reader(r)?,
-                        })
-                    }
+                    // Badly support segregated witness for LTC.
+                    // We don't care about segwit addresses
+                    // this is just to make the binary work
+                    // if those kind of transactions are given as input.
+                    Ok(Transaction {
+                        version: version,
+                        input: input,
+                        output: output,
+                        lock_time: Decodable::consensus_decode(r)?,
+                    })
                 }
                 // We don't support anything else
                 x => Err(encode::Error::UnsupportedSegwitFlag(x)),
